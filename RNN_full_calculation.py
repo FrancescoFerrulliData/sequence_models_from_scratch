@@ -52,7 +52,7 @@ class RNN(object):
         return xs, hs, ps
 
     def store_last_internal_cell_status(self, hs):
-        self._hidden_state = hs[-1]
+        self._hidden_state = hs[len(hs)-2]
 
     def backward(self, xs, hs, ps, targets):
         dWxh, dWhh, dWhy = np.zeros_like(self.Wxh), np.zeros_like(self.Whh), np.zeros_like(self.Why)
@@ -81,11 +81,8 @@ class RNN(object):
             w += -self.learning_rate * dw / np.sqrt(mw + 1e-8)
 
     def train(self, data):
-        #history = []
-        #texts = []
         # loss at iteration 0: the probability of having n=seq_length randomly chosen character from a dictionary
         # containing i=input_size number of different characters.
-        #smooth_loss = -np.log(1.0 / self.input_size) * self.seq_length
 
         inputs, targets = chunks_input_target(data, self.seq_length, self.encoding)
         for iteration, (input, target) in enumerate(zip(inputs, targets)):
@@ -219,7 +216,7 @@ if __name__ == '__main__':
     rnn = RNN(vocab_size, HIDDEN_SIZE, vocab_size, seq_length=SEQ_LENGHT)
     optimiser = Ada_grad(vocab_size, HIDDEN_SIZE, vocab_size)
     rnn.compile(cross_entropy, optimiser, char_to_indx, indx_to_char)
-    #history, texts = rnn.train(data)
+
     rnn.train(data)
     plt.plot(rnn.history)
     plt.show()
