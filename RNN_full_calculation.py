@@ -24,6 +24,8 @@ class RNN(object):
         self.Wxh, self.Whh, self.Why, self.bh, self.by = set_model_parameters(input_size, hidden_size, ouput_size)
         self.activation_fn = activation_fn
         self.learning_rate = learning_rate
+        self.history = [-np.log(1.0 / self.input_size) * self.seq_length]
+        self.texts = []
 
     def compile(self, loss, optimiser, char_to_indx, indx_to_char):
         self.loss = loss
@@ -79,11 +81,11 @@ class RNN(object):
             w += -self.learning_rate * dw / np.sqrt(mw + 1e-8)
 
     def train(self, data):
-        history = []
-        texts = []
+        #history = []
+        #texts = []
         # loss at iteration 0: the probability of having n=seq_length randomly chosen character from a dictionary
         # containing i=input_size number of different characters.
-        smooth_loss = -np.log(1.0 / self.input_size) * self.seq_length
+        #smooth_loss = -np.log(1.0 / self.input_size) * self.seq_length
 
         inputs, targets = chunks_input_target(data, self.seq_length, self.encoding)
         for iteration, (input, target) in enumerate(zip(inputs, targets)):
@@ -101,14 +103,16 @@ class RNN(object):
             self.update_weights(dWxh, dWhh, dWhy, dbh, dby)
 
             # compute total loss
-            smooth_loss = smooth_loss * 0.999 + iteration_loss * 0.001
+            #smooth_loss = smooth_loss * 0.999 + iteration_loss * 0.001
+            smooth_loss = self.history[-1] * 0.999 + iteration_loss * 0.001
+
             if iteration % 100 == 0:
                 print('iter {}, loss: {}'.format(iteration, smooth_loss))
-                texts.append(self.sample(inputs[0], 8, self.decoding))
+                self.texts.append(self.sample(inputs[0], 8, self.decoding))
 
-            history.append(smooth_loss)
+            self.history.append(smooth_loss)
 
-        return history, texts
+        #return history, texts
 
     def sample(self, seed_ix, n, indx_to_char):
 
@@ -215,9 +219,9 @@ if __name__ == '__main__':
     rnn = RNN(vocab_size, HIDDEN_SIZE, vocab_size, seq_length=SEQ_LENGHT)
     optimiser = Ada_grad(vocab_size, HIDDEN_SIZE, vocab_size)
     rnn.compile(cross_entropy, optimiser, char_to_indx, indx_to_char)
-    history, texts = rnn.train(data)
-
-    plt.plot(history)
+    #history, texts = rnn.train(data)
+    rnn.train(data)
+    plt.plot(rnn.history)
     plt.show()
 
-    print(texts[-5:])
+    print(rnn.texts[-5:])
