@@ -9,7 +9,7 @@ FILEPATH_2 = 'deamicis2.txt'
 HIDDEN_SIZE = 100  # size of hidden layer of neurons
 SEQ_LENGHT = 25  # number of steps to unroll the RNN for. Equivalent concept of mini batch.
 EPOCHS = 10
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-1
 
 
 class LSTM(object):
@@ -84,9 +84,9 @@ class LSTM(object):
             f[t] = self.sigmoid(np.dot(self.Wf, z[t]) + self.bf)
             i[t] = self.sigmoid(np.dot(self.Wi, z[t]) + self.bi)
             g[t] = self.tanh_activ(np.dot(self.Wg, z[t]) + self.bg)
+            o[t] = self.sigmoid(np.dot(self.Wo, z[t]) + self.bo)
 
             c[t] = f[t] * c[t - 1] + i[t] * g[t]
-            o[t] = self.sigmoid(np.dot(self.Wo, z[t]) + self.bo)
             h[t] = o[t] * np.tanh(c[t])
 
             y[t] = np.dot(self.Wy, h[t]) + self.by
@@ -97,8 +97,8 @@ class LSTM(object):
         return cell_dict
 
     def store_last_internal_cell_status(self, h, c):
-        self._hidden_state = h[len(h)-2]
-        self._cell_state = c[len(h)-2]
+        self._hidden_state = h[len(h) - 2]
+        self._cell_state = c[len(h) - 2]
 
     # need to work on backwards
 
@@ -158,10 +158,10 @@ class LSTM(object):
             dh_next = dz[:self.hidden_size, :]
             dc_next = cell_dict["f"][t] * dc
 
-        for dparam in [dWf, dWi, dWg, dWo, dWy, dbf, dbi, dbg, dbo, dby]:
-            np.clip(dparam, -5, 5, out=dparam)  # clip to mitigate exploding gradients
-        grads = {"dWf": dWf, "dWi": dWi, "dWg": dWg, "dWo": dWo, "dWy":dWy, "dbf":dbf, "dbi":dbi, "dbg":dbg,
-                 "dbo":dbo, "dby":dby}
+        # for dparam in [dWf, dWi, dWg, dWo, dWy, dbf, dbi, dbg, dbo, dby]:
+        #     np.clip(dparam, -5, 5, out=dparam)  # clip to mitigate exploding gradients
+        grads = {"dWf": dWf, "dWi": dWi, "dWg": dWg, "dWo": dWo, "dWy": dWy, "dbf": dbf, "dbi": dbi, "dbg": dbg,
+                 "dbo": dbo, "dby": dby}
         return grads
 
     def update_weights(self, grads, iteration):
@@ -188,7 +188,7 @@ class LSTM(object):
             for iteration, (input, target) in enumerate(zip(inputs, targets)):
 
                 # forward
-                forward_dict = self.forward(input, self._hidden_state,self._cell_state)
+                forward_dict = self.forward(input, self._hidden_state, self._cell_state)
                 self.store_last_internal_cell_status(forward_dict['h'], forward_dict['c'])
 
                 # compute time-batch-loss
@@ -203,8 +203,8 @@ class LSTM(object):
 
                 # compute total loss
                 smooth_loss = self.history[-1] * 0.999 + iteration_loss * 0.001
-                # if iteration % 100 == 0:
-                #     print('iter {}, loss: {}'.format(iteration, smooth_loss))
+                if iteration % 100 == 0:
+                    print('Epoch: {}, iter {}, loss: {}'.format(epoch, iteration, smooth_loss))
                 #     self.texts.append(self.sample(inputs[0], 8, self.decoding))
 
                 self.history.append(smooth_loss)
@@ -218,7 +218,6 @@ class LSTM(object):
         txt = str()
 
         for t in range(n):
-
             z = np.row_stack((h, x))
 
             f = self.sigmoid(np.dot(self.Wf, z) + self.bf)
@@ -339,7 +338,8 @@ def sigmoid(x):
 
 
 def softmax(x):
-    e_x = np.exp(x - np.max(x))  # max(x) subtracted for numerical stability
+    e_x = np.exp(x )
+
     return e_x / np.sum(e_x)
 
 
@@ -349,9 +349,9 @@ def cross_entropy(prediction, target):
 
 if __name__ == '__main__':
     # LOAD DATA
-    file_list = [FILEPATH_1, DANTE_PATH, FILEPATH_2]
+    file_list = [DANTE_PATH]
 
-    data, chars, char_to_indx, indx_to_char = load_data(file_list)
+    data, chars, char_to_indx, indx_to_char = load_data(file_list, lower=True)
     data_size, vocab_size = len(data), len(chars)
     print(data_size)
 
@@ -364,4 +364,4 @@ if __name__ == '__main__':
     plt.plot(lstm.history)
     plt.show()
 
-    print(lstm.texts[-5:])
+    #print(lstm.texts[-5:])

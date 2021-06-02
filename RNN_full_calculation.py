@@ -100,7 +100,6 @@ class RNN(object):
             self.update_weights(dWxh, dWhh, dWhy, dbh, dby)
 
             # compute total loss
-            #smooth_loss = smooth_loss * 0.999 + iteration_loss * 0.001
             smooth_loss = self.history[-1] * 0.999 + iteration_loss * 0.001
 
             if iteration % 100 == 0:
