@@ -25,9 +25,11 @@ class RNN(object):
         self.activation_fn = activation_fn
         self.learning_rate = learning_rate
 
-    def compile(self, loss, optimiser):
+    def compile(self, loss, optimiser, char_to_indx, indx_to_char):
         self.loss = loss
         self.optimiser = optimiser
+        self.encoding = char_to_indx
+        self.decoding = indx_to_char
 
     def forward(self, input, hidden_previous):
         """
@@ -83,7 +85,7 @@ class RNN(object):
         # containing i=input_size number of different characters.
         smooth_loss = -np.log(1.0 / self.input_size) * self.seq_length
 
-        inputs, targets = chunks_input_target(data, self.seq_length)
+        inputs, targets = chunks_input_target(data, self.seq_length, self.encoding)
         for iteration, (input, target) in enumerate(zip(inputs, targets)):
             # forward
             xs, hs, ps = self.forward(input, self._hidden_state)
@@ -102,13 +104,13 @@ class RNN(object):
             smooth_loss = smooth_loss * 0.999 + iteration_loss * 0.001
             if iteration % 100 == 0:
                 print('iter {}, loss: {}'.format(iteration, smooth_loss))
-                texts.append(self.sample(inputs[0], 8))
+                texts.append(self.sample(inputs[0], 8, self.decoding))
 
             history.append(smooth_loss)
 
         return history, texts
 
-    def sample(self, seed_ix, n):
+    def sample(self, seed_ix, n, indx_to_char):
 
         h = self._hidden_state
         x = np.zeros((vocab_size, 1))
@@ -156,7 +158,7 @@ def load_data(file_paths, lower=False):
     return data, chars, char_to_indx, indx_to_char
 
 
-def chunks_input_target(data, seq_length):
+def chunks_input_target(data, seq_length, char_to_indx):
     inputs, targets = [], []
     data_input = data[:-1]
     data_output = data[1:]
@@ -203,7 +205,7 @@ def cross_entropy(prediction, target):
 
 if __name__ == '__main__':
     # LOAD DATA
-    file_list = [FILEPATH_1,DANTE_PATH,FILEPATH_2]
+    file_list = [FILEPATH_1, DANTE_PATH, FILEPATH_2]
 
     data, chars, char_to_indx, indx_to_char = load_data(file_list)
     data_size, vocab_size = len(data), len(chars)
@@ -212,7 +214,7 @@ if __name__ == '__main__':
     # Define RNN architecture
     rnn = RNN(vocab_size, HIDDEN_SIZE, vocab_size, seq_length=SEQ_LENGHT)
     optimiser = Ada_grad(vocab_size, HIDDEN_SIZE, vocab_size)
-    rnn.compile(cross_entropy, optimiser)
+    rnn.compile(cross_entropy, optimiser, char_to_indx, indx_to_char)
     history, texts = rnn.train(data)
 
     plt.plot(history)
