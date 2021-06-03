@@ -3,13 +3,14 @@ import matplotlib.pyplot as plt
 
 # CONSTANTS
 DANTE_PATH = 'dante.txt'
+SHAK_PATH = 'shakespeare.txt'
 FILEPATH_1 = 'deamicis.txt'  # should be simple plain text file
 FILEPATH_2 = 'deamicis2.txt'
 
 HIDDEN_SIZE = 100  # size of hidden layer of neurons
 SEQ_LENGHT = 25  # number of steps to unroll the RNN for. Equivalent concept of mini batch.
-EPOCHS = 10
-LEARNING_RATE = 1e-1
+EPOCHS = 3
+LEARNING_RATE = 1e-2
 
 
 class LSTM(object):
@@ -182,9 +183,9 @@ class LSTM(object):
     def train(self, data):
         # loss at iteration 0: the probability of having n=seq_length randomly chosen character from a dictionary
         # containing i=input_size number of different characters.
-        self.reset_hidden_cell_status()
         inputs, targets = chunks_input_target(data, self.seq_length, self.encoding)
         for epoch in range(self.epochs):
+            self.reset_hidden_cell_status()
             for iteration, (input, target) in enumerate(zip(inputs, targets)):
 
                 # forward
@@ -199,13 +200,15 @@ class LSTM(object):
 
                 # update model
                 batch_num = epoch * self.epochs + iteration / self.seq_length + 1
+
                 self.update_weights(grads, batch_num)  # <--- iteration must take into account the epoch number. CHANGE
 
                 # compute total loss
                 smooth_loss = self.history[-1] * 0.999 + iteration_loss * 0.001
                 if iteration % 100 == 0:
                     print('Epoch: {}, iter {}, loss: {}'.format(epoch, iteration, smooth_loss))
-                #     self.texts.append(self.sample(inputs[0], 8, self.decoding))
+                    self.texts.append(self.sample(inputs[0], 50, self.decoding))
+                    print(self.texts[-1])
 
                 self.history.append(smooth_loss)
 
@@ -269,8 +272,8 @@ class Adam_opt(object):
         self._S_by = np.zeros((ouput_size, 1))
 
     def update_adam_weigths(self, grads, t):
-        scal1 = 1 - self.beta1 ** t
-        scal2 = 1 - self.beta2 ** t
+        scal1 = 1 - np.power(self.beta1,t)
+        scal2 = 1 - np.power(self.beta2,t)
         # momentum update
         self._M_Wf = (self.beta1 * self._M_Wf + (1 - self.beta1) * grads["dWf"]) / scal1
         self._M_Wi = (self.beta1 * self._M_Wi + (1 - self.beta1) * grads["dWi"]) / scal1
@@ -349,11 +352,12 @@ def cross_entropy(prediction, target):
 
 if __name__ == '__main__':
     # LOAD DATA
-    file_list = [DANTE_PATH]
+    file_list = [SHAK_PATH]
 
     data, chars, char_to_indx, indx_to_char = load_data(file_list, lower=True)
     data_size, vocab_size = len(data), len(chars)
     print(data_size)
+    print(vocab_size)
 
     # Define RNN architecture
     lstm = LSTM(vocab_size, HIDDEN_SIZE, vocab_size, seq_length=SEQ_LENGHT)
